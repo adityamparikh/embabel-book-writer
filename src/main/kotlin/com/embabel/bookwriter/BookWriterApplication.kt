@@ -13,15 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.embabel.template
+package com.embabel.bookwriter
 
 import com.embabel.agent.config.annotation.EnableAgents
+import com.embabel.agent.config.annotation.LocalModels
 import com.embabel.agent.config.annotation.LoggingThemes
+import com.embabel.agent.config.annotation.McpServers
+import com.embabel.agent.config.models.DockerLocalModels
+import io.modelcontextprotocol.server.McpServer
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-@EnableAgents(loggingTheme = LoggingThemes.STAR_WARS)
+@EnableAgents(loggingTheme = LoggingThemes.STAR_WARS,
+    localModels = [LocalModels.DOCKER],
+    mcpServers = [McpServers.DOCKER_DESKTOP])
 class ProjectNameApplication
 
 fun main(args: Array<String>) {

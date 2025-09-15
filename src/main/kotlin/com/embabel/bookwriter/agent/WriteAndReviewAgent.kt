@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.embabel.template.agent
+package com.embabel.bookwriter.agent
 
 import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
@@ -21,6 +21,8 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.create
+import com.embabel.agent.core.CoreToolGroups
+import com.embabel.agent.core.CoreToolGroups.WEB
 import com.embabel.agent.domain.io.UserInput
 import com.embabel.agent.domain.library.HasContent
 import com.embabel.agent.prompt.persona.Persona
@@ -33,25 +35,25 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-val StoryTeller = RoleGoalBackstory(
-    role = "A creative storyteller who loves to weave imaginative tales that are a bit unconventional",
-    goal = "Create memorable stories that captivate the reader's imagination.",
-    backstory = "You have been crafting stories for as long as you can remember. Your tales often feature unexpected twists and unique characters that leave a lasting impression on your audience.",
+val writer = RoleGoalBackstory(
+    role = "An engaging passionate educator who loves to teach programming and software",
+    goal = "Teach engineers experienced or not in a manner captivate the reader's imagination.",
+    backstory = "You have been teaching programming for as long as you can remember. Your style is engaging with fun analogies and code examples that leave a lasting impression on your audience.",
 )
 
 val Reviewer = Persona(
-    name = "Media Book Review",
-    persona = "New York Times Book Reviewer",
+    name = "Programming Book Review",
+    persona = "Someone like Dr. Venkat Subramaniam",
     voice = "Professional and insightful",
-    objective = "Help guide readers toward good stories",
+    objective = "Help educate readers on the topic that is the focus of the book",
 )
 
-data class Story(
-    val text: String,
+data class Book(
+    val topic: String,
 )
 
 data class ReviewedStory(
-    val story: Story,
+    val book: Book,
     val review: String,
     val reviewer: Persona,
 ) : HasContent, Timestamped {
@@ -61,8 +63,8 @@ data class ReviewedStory(
 
     override val content: String
         get() = """
-            # Story
-            ${story.text}
+            # Book
+            ${book.topic}
 
             # Review
             $review
@@ -77,25 +79,26 @@ data class ReviewedStory(
 
 
 @Agent(
-    description = "Generate a story based on user input and review it",
+    description = "Write a book based on user input and review it",
 )
 @Profile("!test")
 class WriteAndReviewAgent(
-    @param:Value("\${storyWordCount:100}") private val storyWordCount: Int,
+    @param:Value("\${storyWordCount:3000}") private val bookWordCount: Int,
     @param:Value("\${reviewWordCount:100}") private val reviewWordCount: Int,
 ) {
 
     @Action
-    fun craftStory(userInput: UserInput, context: OperationContext): Story =
+    fun writeBook(userInput: UserInput, context: OperationContext): Book =
         context.ai()
             .withLlm(LlmOptions.withAutoLlm().withTemperature(0.7))
-            .withPromptContributor(StoryTeller)
+            .withPromptContributor(writer)
+            .withToolGroup(WEB)
             .create(
                 """
-            Craft a short story in $storyWordCount words or less.
-            The story should be engaging and imaginative.
-            Use the user's input as inspiration if possible.
-            If the user has provided a name, include it in the story.
+            Write a book in about $bookWordCount words.
+            The content should be engaging and with examples.
+            Use the web to research.
+            If the user has provided topics, include it in the outline.
 
             # User input
             ${userInput.content}
@@ -103,30 +106,30 @@ class WriteAndReviewAgent(
             )
 
     @AchievesGoal(
-        description = "The user has been greeted",
+        description = "The book has been created and reviewed by a professional",
         export = Export(remote = true, name = "writeAndReviewStory")
     )
     @Action
-    fun reviewStory(userInput: UserInput, story: Story, context: OperationContext): ReviewedStory {
+    fun reviewStory(userInput: UserInput, book: Book, context: OperationContext): ReviewedStory {
         val review = context.ai()
             .withAutoLlm()
             .withPromptContributor(Reviewer)
             .generateText(
                 """
-            You will be given a short story to review.
+            You will be given a programming and software book to review.
             Review it in $reviewWordCount words or less.
-            Consider whether or not the story is engaging, imaginative, and well-written.
-            Also consider whether the story is appropriate given the original user input.
+            Consider whether or not the style is engaging, and well-written.
+            Also consider whether the topics incorporate given the original user input.
 
-            # Story
-            ${story.text}
+            # Topic
+            ${book.topic}
 
             # User input that inspired the story
             ${userInput.content}
         """.trimIndent()
             )
         return ReviewedStory(
-            story = story,
+            book = book,
             review = review,
             reviewer = Reviewer,
         )

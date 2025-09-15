@@ -9,7 +9,7 @@
         <relativePath/> <!-- Lookup parent from repository -->
     </parent>
     <groupId>com.embabel.template</groupId>
-    <artifactId>ProjectName</artifactId>
+    <artifactId>embabel-book-writer</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>My first agent</name>
