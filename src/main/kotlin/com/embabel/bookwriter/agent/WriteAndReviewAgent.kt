@@ -21,67 +21,16 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.create
-import com.embabel.agent.core.CoreToolGroups
 import com.embabel.agent.core.CoreToolGroups.WEB
 import com.embabel.agent.domain.io.UserInput
-import com.embabel.agent.domain.library.HasContent
-import com.embabel.agent.prompt.persona.Persona
-import com.embabel.agent.prompt.persona.RoleGoalBackstory
+import com.embabel.bookwriter.Book
+import com.embabel.bookwriter.ReviewedBook
 import com.embabel.common.ai.model.LlmOptions
-import com.embabel.common.core.types.Timestamped
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Profile
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-val writer = RoleGoalBackstory(
-    role = "An engaging passionate educator who loves to teach programming and software",
-    goal = "Teach engineers experienced or not in a manner captivate the reader's imagination.",
-    backstory = "You have been teaching programming for as long as you can remember. Your style is engaging with fun analogies and code examples that leave a lasting impression on your audience.",
-)
-
-val Reviewer = Persona(
-    name = "Programming Book Review",
-    persona = "Someone like Dr. Venkat Subramaniam",
-    voice = "Professional and insightful",
-    objective = "Help educate readers on the topic that is the focus of the book",
-)
-
-data class Book(
-    val topic: String,
-)
-
-data class ReviewedStory(
-    val book: Book,
-    val review: String,
-    val reviewer: Persona,
-) : HasContent, Timestamped {
-
-    override val timestamp: Instant
-        get() = Instant.now()
-
-    override val content: String
-        get() = """
-            # Book
-            ${book.topic}
-
-            # Review
-            $review
-
-            # Reviewer
-            ${reviewer.name}, ${
-            timestamp.atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))
-        }
-        """.trimIndent()
-}
-
 
 @Agent(
     description = "Write a book based on user input and review it",
 )
-@Profile("!test")
 class WriteAndReviewAgent(
     @param:Value("\${storyWordCount:3000}") private val bookWordCount: Int,
     @param:Value("\${reviewWordCount:100}") private val reviewWordCount: Int,
@@ -107,16 +56,16 @@ class WriteAndReviewAgent(
 
     @AchievesGoal(
         description = "The book has been created and reviewed by a professional",
-        export = Export(remote = true, name = "writeAndReviewStory")
+        export = Export(remote = true, name = "writeAndReviewBook")
     )
     @Action
-    fun reviewStory(userInput: UserInput, book: Book, context: OperationContext): ReviewedStory {
+    fun reviewBook(userInput: UserInput, book: Book, context: OperationContext): ReviewedBook {
         val review = context.ai()
-            .withAutoLlm()
+            .withLlm(LlmOptions.withAutoLlm().withTemperature(0.2))
             .withPromptContributor(Reviewer)
             .generateText(
                 """
-            You will be given a programming and software book to review.
+            You will be given a book to review.
             Review it in $reviewWordCount words or less.
             Consider whether or not the style is engaging, and well-written.
             Also consider whether the topics incorporate given the original user input.
@@ -128,7 +77,7 @@ class WriteAndReviewAgent(
             ${userInput.content}
         """.trimIndent()
             )
-        return ReviewedStory(
+        return ReviewedBook(
             book = book,
             review = review,
             reviewer = Reviewer,

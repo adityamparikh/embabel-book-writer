@@ -19,8 +19,6 @@ import com.embabel.agent.config.annotation.EnableAgents
 import com.embabel.agent.config.annotation.LocalModels
 import com.embabel.agent.config.annotation.LoggingThemes
 import com.embabel.agent.config.annotation.McpServers
-import com.embabel.agent.config.models.DockerLocalModels
-import io.modelcontextprotocol.server.McpServer
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
